@@ -1,0 +1,25 @@
+author: mongoose-os
+description: Implements RAM-based VFS device
+type: lib
+version: 1.0
+
+sources:
+  - src
+includes:
+  - include
+
+libs:
+  - origin: https://github.com/mongoose-os-libs/vfs-common
+
+# TODO(rojer): Enable when mos-latest is released and restore SPI dep.
+# VFS libs need to manage their deps themselves.
+#manifest_version: 2018-06-20
+#no_implicit_init_deps: true
+#init_after:
+#  - mongoose
+
+tags:
+  - c
+  - vfs
+
+manifest_version: 2017-09-29
