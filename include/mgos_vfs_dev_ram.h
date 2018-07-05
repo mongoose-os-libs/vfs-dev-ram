@@ -27,8 +27,6 @@ extern "C" {
 
 #define MGOS_VFS_DEV_TYPE_RAM "RAM"
 
-bool mgos_vfs_dev_ram_register_type(void);
-
 #ifdef __cplusplus
 }
 #endif

@@ -37,8 +37,9 @@ struct mgos_vfs_dev_ram_data {
   uint8_t erase_byte;
 };
 
-static bool mgos_vfs_dev_ram_open(struct mgos_vfs_dev *dev, const char *opts) {
-  bool res = false;
+static enum mgos_vfs_dev_err mgos_vfs_dev_ram_open(struct mgos_vfs_dev *dev,
+                                                   const char *opts) {
+  enum mgos_vfs_dev_err res = MGOS_VFS_DEV_ERR_INVAL;
   struct mgos_vfs_dev_ram_data *dd = NULL;
   uint8_t fb = 0xff;
   int size = 0, flash_check = false, erase_byte = 0xff, fill_byte = 0xff;
@@ -58,10 +59,10 @@ static bool mgos_vfs_dev_ram_open(struct mgos_vfs_dev *dev, const char *opts) {
   fb = (uint8_t) fill_byte;
   memset(dd->data, fb, dd->size);
   dev->dev_data = dd;
-  res = true;
+  res = MGOS_VFS_DEV_ERR_NONE;
 
 out:
-  if (!res && dd != NULL) {
+  if (res != 0 && dd != NULL) {
     free(dd->data);
     free(dd);
   } else {
@@ -71,26 +72,28 @@ out:
   return res;
 }
 
-static bool mgos_vfs_dev_ram_read(struct mgos_vfs_dev *dev, size_t offset,
-                                  size_t len, void *dst) {
-  bool res = false;
+static enum mgos_vfs_dev_err mgos_vfs_dev_ram_read(struct mgos_vfs_dev *dev,
+                                                   size_t offset, size_t len,
+                                                   void *dst) {
+  enum mgos_vfs_dev_err res = MGOS_VFS_DEV_ERR_INVAL;
   struct mgos_vfs_dev_ram_data *dd =
       (struct mgos_vfs_dev_ram_data *) dev->dev_data;
   if (len > dd->size || offset + len > dd->size) {
     goto out;
   }
   memcpy(dst, dd->data + offset, len);
-  res = true;
+  res = MGOS_VFS_DEV_ERR_NONE;
 
 out:
-  LOG((res ? LL_DEBUG : LL_ERROR),
+  LOG((res == 0 ? LL_VERBOSE_DEBUG : LL_ERROR),
       ("%s %u @ 0x%x = %d", "read", (unsigned) len, (unsigned) offset, res));
   return res;
 }
 
-static bool mgos_vfs_dev_ram_write(struct mgos_vfs_dev *dev, size_t offset,
-                                   size_t len, const void *src) {
-  bool res = false;
+static enum mgos_vfs_dev_err mgos_vfs_dev_ram_write(struct mgos_vfs_dev *dev,
+                                                    size_t offset, size_t len,
+                                                    const void *src) {
+  enum mgos_vfs_dev_err res = MGOS_VFS_DEV_ERR_INVAL;
   uint8_t *srcb = (uint8_t *) src;
   struct mgos_vfs_dev_ram_data *dd =
       (struct mgos_vfs_dev_ram_data *) dev->dev_data;
@@ -110,27 +113,27 @@ static bool mgos_vfs_dev_ram_write(struct mgos_vfs_dev *dev, size_t offset,
     dd->data[offset + i] = src_byte;
   }
 
-  res = true;
+  res = MGOS_VFS_DEV_ERR_NONE;
 
 out:
-  LOG((res ? LL_DEBUG : LL_ERROR),
+  LOG((res == 0 ? LL_VERBOSE_DEBUG : LL_ERROR),
       ("%s %u @ 0x%x = %d", "write", (unsigned) len, (unsigned) offset, res));
   return res;
 }
 
-static bool mgos_vfs_dev_ram_erase(struct mgos_vfs_dev *dev, size_t offset,
-                                   size_t len) {
-  bool res = false;
+static enum mgos_vfs_dev_err mgos_vfs_dev_ram_erase(struct mgos_vfs_dev *dev,
+                                                    size_t offset, size_t len) {
+  enum mgos_vfs_dev_err res = MGOS_VFS_DEV_ERR_INVAL;
   struct mgos_vfs_dev_ram_data *dd =
       (struct mgos_vfs_dev_ram_data *) dev->dev_data;
   if (len > dd->size || offset + len > dd->size) {
     goto out;
   }
   memset(dd->data + offset, 0xff, len);
-  res = true;
+  res = MGOS_VFS_DEV_ERR_NONE;
 
 out:
-  LOG((res ? LL_DEBUG : LL_ERROR),
+  LOG((res == 0 ? LL_VERBOSE_DEBUG : LL_ERROR),
       ("%s %u @ 0x%x = %d", "erase", (unsigned) len, (unsigned) offset, res));
   return res;
 }
@@ -141,12 +144,12 @@ static size_t mgos_vfs_dev_ram_get_size(struct mgos_vfs_dev *dev) {
   return dd->size;
 }
 
-static bool mgos_vfs_dev_ram_close(struct mgos_vfs_dev *dev) {
+static enum mgos_vfs_dev_err mgos_vfs_dev_ram_close(struct mgos_vfs_dev *dev) {
   struct mgos_vfs_dev_ram_data *dd =
       (struct mgos_vfs_dev_ram_data *) dev->dev_data;
   free(dd->data);
   free(dd);
-  return true;
+  return MGOS_VFS_DEV_ERR_NONE;
 }
 
 static const struct mgos_vfs_dev_ops mgos_vfs_dev_ram_ops = {
@@ -158,7 +161,7 @@ static const struct mgos_vfs_dev_ops mgos_vfs_dev_ram_ops = {
     .close = mgos_vfs_dev_ram_close,
 };
 
-bool mgos_vfs_dev_ram_register_type(void) {
+bool mgos_vfs_dev_ram_init(void) {
   return mgos_vfs_dev_register_type(MGOS_VFS_DEV_TYPE_RAM,
                                     &mgos_vfs_dev_ram_ops);
 }
