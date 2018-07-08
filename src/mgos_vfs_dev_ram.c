@@ -33,7 +33,8 @@
 struct mgos_vfs_dev_ram_data {
   size_t size;
   uint8_t *data;
-  bool flash_check;
+  uint8_t own_data : 1;
+  uint8_t flash_check : 1;
   uint8_t erase_byte;
 };
 
@@ -42,20 +43,30 @@ static enum mgos_vfs_dev_err mgos_vfs_dev_ram_open(struct mgos_vfs_dev *dev,
   enum mgos_vfs_dev_err res = MGOS_VFS_DEV_ERR_INVAL;
   struct mgos_vfs_dev_ram_data *dd = NULL;
   uint8_t fb = 0xff;
-  int size = 0, flash_check = false, erase_byte = 0xff, fill_byte = 0xff;
-  json_scanf(opts, strlen(opts),
-             "{size: %d, erase_byte: %d, fill_byte: %d, flash_check: %B}",
-             &size, &erase_byte, &fill_byte, &flash_check);
+  unsigned long addr = 0, size = 0;
+  int flash_check = false, erase_byte = 0xff, fill_byte = 0xff;
+  json_scanf(
+      opts, strlen(opts),
+      "{addr: %lu, size: %lu, erase_byte: %d, fill_byte: %d, flash_check: %B}",
+      &addr, &size, &erase_byte, &fill_byte, &flash_check);
   if (size <= 0) {
     LOG(LL_ERROR, ("Size is required for RAM device"));
     goto out;
   }
   dd = (struct mgos_vfs_dev_ram_data *) calloc(1, sizeof(*dd));
   dd->size = size;
-  dd->data = (uint8_t *) malloc(dd->size);
   dd->flash_check = flash_check;
   dd->erase_byte = (uint8_t) erase_byte;
-  if (dd->data == NULL) goto out;
+  if (addr != 0) {
+    dd->data = (uint8_t *) addr;
+  } else {
+    dd->data = (uint8_t *) malloc(dd->size);
+    if (dd->data == NULL) {
+      res = MGOS_VFS_DEV_ERR_NOMEM;
+      goto out;
+    }
+    dd->own_data = true;
+  }
   fb = (uint8_t) fill_byte;
   memset(dd->data, fb, dd->size);
   dev->dev_data = dd;
@@ -66,8 +77,9 @@ out:
     free(dd->data);
     free(dd);
   } else {
-    LOG(LL_INFO, ("%u bytes, eb 0x%02x, fb 0x%02x, fc %s", (unsigned) dd->size,
-                  dd->erase_byte, fb, (dd->flash_check ? "yes" : "no")));
+    LOG(LL_INFO,
+        ("%u bytes @ %p, eb 0x%02x, fb 0x%02x, fc %s", (unsigned) dd->size,
+         dd->data, dd->erase_byte, fb, (dd->flash_check ? "yes" : "no")));
   }
   return res;
 }
@@ -147,7 +159,7 @@ static size_t mgos_vfs_dev_ram_get_size(struct mgos_vfs_dev *dev) {
 static enum mgos_vfs_dev_err mgos_vfs_dev_ram_close(struct mgos_vfs_dev *dev) {
   struct mgos_vfs_dev_ram_data *dd =
       (struct mgos_vfs_dev_ram_data *) dev->dev_data;
-  free(dd->data);
+  if (dd->own_data) free(dd->data);
   free(dd);
   return MGOS_VFS_DEV_ERR_NONE;
 }
