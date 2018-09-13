@@ -164,6 +164,15 @@ static enum mgos_vfs_dev_err mgos_vfs_dev_ram_close(struct mgos_vfs_dev *dev) {
   return MGOS_VFS_DEV_ERR_NONE;
 }
 
+static enum mgos_vfs_dev_err mgos_vfs_dev_ram_get_erase_sizes(
+    struct mgos_vfs_dev *dev, size_t sizes[MGOS_VFS_DEV_NUM_ERASE_SIZES]) {
+  sizes[0] = 1;
+  sizes[1] = 128;
+  sizes[2] = 1024;
+  (void) dev;
+  return MGOS_VFS_DEV_ERR_NONE;
+}
+
 static const struct mgos_vfs_dev_ops mgos_vfs_dev_ram_ops = {
     .open = mgos_vfs_dev_ram_open,
     .read = mgos_vfs_dev_ram_read,
@@ -171,6 +180,7 @@ static const struct mgos_vfs_dev_ops mgos_vfs_dev_ram_ops = {
     .erase = mgos_vfs_dev_ram_erase,
     .get_size = mgos_vfs_dev_ram_get_size,
     .close = mgos_vfs_dev_ram_close,
+    .get_erase_sizes = mgos_vfs_dev_ram_get_erase_sizes,
 };
 
 bool mgos_vfs_dev_ram_init(void) {
